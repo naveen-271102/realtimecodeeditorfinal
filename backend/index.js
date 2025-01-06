@@ -8,21 +8,7 @@ const app = express();
 
 const server = http.createServer(app);
 
-const url = `https://realtime-code-editor-final.onrender.com`;
-const interval = 30000;
-
-function reloadWebsite() {
-  axios
-    .get(url)
-    .then((response) => {
-      console.log("website reloded");
-    })
-    .catch((error) => {
-      console.error(`Error : ${error.message}`);
-    });
-}
-
-setInterval(reloadWebsite, interval);
+const url = `https://realtimecodeeditorfinal.onrender.com`;
 
 const io = new Server(server, {
   cors: {
