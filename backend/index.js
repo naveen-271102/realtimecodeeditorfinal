@@ -1,12 +1,28 @@
-import { Socket } from "dgram";
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import path from "path";
+import axios from "axios";
 
 const app = express();
 
 const server = http.createServer(app);
+
+const url = `https://realtime-code-editor-final.onrender.com`;
+const interval = 30000;
+
+function reloadWebsite() {
+  axios
+    .get(url)
+    .then((response) => {
+      console.log("website reloded");
+    })
+    .catch((error) => {
+      console.error(`Error : ${error.message}`);
+    });
+}
+
+setInterval(reloadWebsite, interval);
 
 const io = new Server(server, {
   cors: {
@@ -17,7 +33,7 @@ const io = new Server(server, {
 const rooms = new Map();
 
 io.on("connection", (socket) => {
-  console.log("User connected", socket.id);
+  console.log("User Connected", socket.id);
 
   let currentRoom = null;
   let currentUser = null;
@@ -67,6 +83,27 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("languageUpdate", language);
   });
 
+  socket.on("compileCode", async ({ code, roomId, language, version }) => {
+    if (rooms.has(roomId)) {
+      const room = rooms.get(roomId);
+      const response = await axios.post(
+        "https://emkc.org/api/v2/piston/execute",
+        {
+          language,
+          version,
+          files: [
+            {
+              content: code,
+            },
+          ],
+        }
+      );
+
+      room.output = response.data.run.output;
+      io.to(roomId).emit("codeResponse", response.data);
+    }
+  });
+
   socket.on("disconnect", () => {
     if (currentRoom && currentUser) {
       rooms.get(currentRoom).delete(currentUser);
@@ -76,7 +113,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 const __dirname = path.resolve();
 
